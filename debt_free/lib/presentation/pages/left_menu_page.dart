@@ -3,6 +3,7 @@ import '../../domain/repositories/transaction_repository.dart';
 import 'categories_page.dart';
 import 'dashboard_page.dart';
 import 'expenses_page.dart';
+import 'goals_page.dart';
 
 class LeftMenuPage extends StatefulWidget {
   final TransactionRepository repository;
@@ -23,6 +24,7 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
       DashboardPage(repository: widget.repository),
       ExpensesPage(repository: widget.repository),
       CategoriesPage(repository: widget.repository),
+      GoalsPage(repository: widget.repository),
     ];
 
     return Scaffold(
@@ -32,7 +34,7 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
             selectedIndex: _selectedIndex,
             onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
             extended: _isMenuExtended,
-            leading: Padding(          // <-- REMPLACE TON ANCIEN "leading:" PAR CE BLOC
+            leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -43,7 +45,7 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
                   ],
                   IconButton(
                     icon: Icon(_isMenuExtended ? Icons.menu_open : Icons.menu),
-                    tooltip: _isMenuExtended ? 'Fermer le menu' : 'Ouvrir le menu',
+                    tooltip: _isMenuExtended ? 'Collapse menu' : 'Expand menu',
                     onPressed: () => setState(() => _isMenuExtended = !_isMenuExtended),
                   ),
                 ],
@@ -64,6 +66,11 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
                 icon: Icon(Icons.category_outlined),
                 selectedIcon: Icon(Icons.category),
                 label: Text('Categories'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.flag_outlined),
+                selectedIcon: Icon(Icons.flag),
+                label: Text('Goals'),
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../domain/entities/goal.dart';
 import '../../domain/entities/transaction.dart';
 import '../../domain/entities/transaction_type.dart';
 
@@ -8,6 +9,8 @@ Future<void> showTransactionEditDialog({
   required List<String> categories,
   required void Function(Transaction tx, TransactionType newType) onChangeType,
   required void Function(Transaction tx, String category, bool remember) onAssignCategory,
+  List<Goal> savingGoals = const [],
+  void Function(Transaction tx, String? goalId)? onAssignGoal,
 }) async {
   String selectedCat = categories.contains(tx.category)
       ? tx.category
@@ -65,6 +68,25 @@ Future<void> showTransactionEditDialog({
                 onChangeType(tx, set.first);
               },
             ),
+            if (tx.isTransfer && savingGoals.isNotEmpty) ...[
+              const Divider(),
+              const Text('Link Transfer to Saving Goal', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<String?>(
+                value: savingGoals.any((g) => g.id == tx.goalId) ? tx.goalId : null,
+                isExpanded: true,
+                items: [
+                  const DropdownMenuItem<String?>(value: null, child: Text('None')),
+                  ...savingGoals.map(
+                    (g) => DropdownMenuItem<String?>(value: g.id, child: Text(g.name)),
+                  ),
+                ],
+                onChanged: (goalId) {
+                  Navigator.pop(ctx);
+                  onAssignGoal?.call(tx, goalId);
+                },
+              ),
+            ],
           ],
         ),
         actions: [

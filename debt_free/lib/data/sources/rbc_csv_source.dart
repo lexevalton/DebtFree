@@ -28,8 +28,9 @@ class RbcCsvSource implements TransactionSource {
       final rawContent = await File(file.path!).readAsString();
       allTransactions.addAll(_parseCsvContent(rawContent));
     }
-    return allTransactions;
+    return _reconcileCardTransfers(allTransactions);
   }
+
 
   List<Transaction> _parseCsvContent(String csvContent) {
     final normalized = csvContent.replaceAll('\r\n', '\n');
@@ -76,35 +77,75 @@ class RbcCsvSource implements TransactionSource {
       dailyOccurrence[baseKey] = occurrenceIndex;
 
       final id = sha256.convert(utf8.encode('$baseKey#$occurrenceIndex')).toString();
+      final accountType = _mapAccountType(rawAccountType);
 
       results.add(Transaction(
         id: id,
-        account: _mapAccountType(rawAccountType),
+        account: accountType,
         date: parsedDate,
         amount: amount,
         merchant: cleanMerchant,
-        type: _classifyTransactionType(cleanMerchant, amount),
+        type: _classifyTransactionType(cleanMerchant, amount, accountType),
       ));
     }
 
     return results;
   }
 
-  TransactionType _classifyTransactionType(String merchant, double amount) {
+  List<Transaction> _reconcileCardTransfers(List<Transaction> txs) {
+    final visaCredits = txs
+        .where((t) => t.account == AccountType.rbcVisa && t.amount > 0)
+        .toList();
+
+    return txs.map((tx) {
+      if (tx.account == AccountType.rbcChequing && tx.amount < 0) {
+        final upper = tx.merchant.toUpperCase();
+        final isOnlineTransfer = upper.contains('VIREMENT PAR BANQUE EN DIRECT') ||
+            upper.contains('VIREMENT BANQUE EN DIRECT') ||
+            upper.contains('ONLINE BANKING TRANSFER');
+
+        if (isOnlineTransfer) {
+          final hasMatchingVisaCredit = visaCredits.any((visaTx) {
+            final sameAmount = (visaTx.amount - tx.absoluteAmount).abs() < 0.01;
+            final dayDiff = visaTx.date.difference(tx.date).inDays.abs();
+            return sameAmount && dayDiff <= 3;
+          });
+
+          if (hasMatchingVisaCredit) {
+            return tx.copyWith(type: TransactionType.transfer);
+          }
+        }
+      }
+      return tx;
+    }).toList();
+  }
+
+  TransactionType _classifyTransactionType(
+    String merchant,
+    double amount,
+    AccountType account,
+  ) {
     final upper = merchant.toUpperCase();
-    const transferKeywords = [
+
+    const definiteTransferKeywords = [
       'PAIEMENT - MERCI',
+      'PAIEMENT RECU',
       'PAYMENT - THANK YOU',
-      'VIREMENT BANQUE EN DIRECT',
-      'ONLINE BANKING TRANSFER',
-      'PAIEMENT FACTURE - VISA',
-      'BILL PAYMENT - VISA',
+      'PAYMENT THANK YOU',
       'WEALTHSIMPLE',
     ];
 
-    if (transferKeywords.any((kw) => upper.contains(kw))) {
+    if (definiteTransferKeywords.any((kw) => upper.contains(kw))) {
       return TransactionType.transfer;
     }
+
+    // Visa positive credits from bill payments are transfers (keep merchant refunds as income)
+    if (account == AccountType.rbcVisa && amount > 0) {
+      if (upper.contains('PAIEMENT') || upper.contains('PAYMENT')) {
+        return TransactionType.transfer;
+      }
+    }
+
     return amount < 0 ? TransactionType.expense : TransactionType.income;
   }
 

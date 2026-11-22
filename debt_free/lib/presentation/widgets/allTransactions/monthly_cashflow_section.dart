@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../domain/entities/account_type.dart';
-import '../../domain/entities/transaction.dart';
-import '../../domain/entities/transaction_type.dart';
+import '../../../domain/entities/account_type.dart';
+import '../../../domain/entities/goal.dart';
+import '../../../domain/entities/transaction.dart';
+import '../../../domain/entities/transaction_type.dart';
+import '../transaction_category_group.dart';
+import '../transaction_edit_dialog.dart';
+import '../transaction_row_card.dart';
 import 'month_breakdown_bar.dart';
-import 'transaction_category_group.dart';
-import 'transaction_edit_dialog.dart';
-import 'transaction_row_card.dart';
 
 class MonthlyCashflowSection extends StatefulWidget {
   final String monthTitle;
@@ -14,11 +15,14 @@ class MonthlyCashflowSection extends StatefulWidget {
   final List<Transaction> incomes;
   final List<Transaction> transfers;
   final List<String> categories;
+  final List<Goal> savingGoals;
   final bool isSelectionMode;
+  final bool showTransfersOnly;
   final Map<String, String> pendingCategoryEdits;
   final void Function(Transaction tx, TransactionType newType) onChangeType;
   final void Function(String txId, String newCategory) onStageCategoryEdit;
   final void Function(Transaction tx, String category, bool remember) onAssignCategory;
+  final void Function(Transaction tx, String? goalId)? onAssignGoal;
 
   const MonthlyCashflowSection({
     super.key,
@@ -27,11 +31,14 @@ class MonthlyCashflowSection extends StatefulWidget {
     required this.incomes,
     required this.transfers,
     required this.categories,
+    this.savingGoals = const [],
     required this.isSelectionMode,
+    this.showTransfersOnly = false,
     required this.pendingCategoryEdits,
     required this.onChangeType,
     required this.onStageCategoryEdit,
     required this.onAssignCategory,
+    this.onAssignGoal,
   });
 
   @override
@@ -89,45 +96,45 @@ class _MonthlyCashflowSectionState extends State<MonthlyCashflowSection> {
             currency: currency,
           ),
           const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: TransactionCategoryGroup(
-                  title: 'Expenses',
-                  formattedTotal: '-${currency.format(_sum(widget.expenses))}',
-                  accentColor: Colors.red.shade700,
-                  emptyMessage: 'No expenses',
-                  transactions: widget.expenses,
-                  currency: currency,
-                  itemBuilder: (tx) => _buildRow(tx, currency),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TransactionCategoryGroup(
-                  title: 'Income',
-                  formattedTotal: '+${currency.format(_sum(widget.incomes))}',
-                  accentColor: Colors.green.shade700,
-                  emptyMessage: 'No income',
-                  transactions: widget.incomes,
-                  currency: currency,
-                  itemBuilder: (tx) => _buildRow(tx, currency),
-                ),
-              ),
-            ],
-          ),
-          if (widget.transfers.isNotEmpty) ...[
-            const SizedBox(height: 12),
+          if (widget.showTransfersOnly)
             TransactionCategoryGroup(
               title: 'Transfers',
               formattedTotal: currency.format(totalTransfers),
               accentColor: Colors.blue.shade700,
+              emptyMessage: 'No transfers for this month',
               transactions: widget.transfers,
               currency: currency,
               itemBuilder: (tx) => _buildRow(tx, currency),
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TransactionCategoryGroup(
+                    title: 'Expenses',
+                    formattedTotal: '-${currency.format(_sum(widget.expenses))}',
+                    accentColor: Colors.red.shade700,
+                    emptyMessage: 'No expenses',
+                    transactions: widget.expenses,
+                    currency: currency,
+                    itemBuilder: (tx) => _buildRow(tx, currency),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TransactionCategoryGroup(
+                    title: 'Income',
+                    formattedTotal: '+${currency.format(_sum(widget.incomes))}',
+                    accentColor: Colors.green.shade700,
+                    emptyMessage: 'No income',
+                    transactions: widget.incomes,
+                    currency: currency,
+                    itemBuilder: (tx) => _buildRow(tx, currency),
+                  ),
+                ),
+              ],
             ),
-          ],
           const SizedBox(height: 16),
           const Divider(thickness: 2, height: 1),
         ],
@@ -149,6 +156,8 @@ class _MonthlyCashflowSectionState extends State<MonthlyCashflowSection> {
         categories: widget.categories,
         onChangeType: widget.onChangeType,
         onAssignCategory: widget.onAssignCategory,
+        savingGoals: widget.savingGoals,
+        onAssignGoal: widget.onAssignGoal,
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:debt_free/domain/entities/goal.dart';
 import 'package:debt_free/domain/entities/transaction.dart';
 import 'package:debt_free/domain/entities/transaction_type.dart';
 import 'package:debt_free/domain/repositories/transaction_repository.dart';
@@ -50,6 +51,21 @@ class FakeTransactionRepository implements TransactionRepository {
 
   @override
   Future<Map<String, int>> getCategoryColors() async => {};
+
+  @override
+  Future<List<Goal>> getGoals() async => [];
+
+  @override
+  Future<void> addGoal(Goal goal) async {}
+
+  @override
+  Future<void> allocateToGoal(String goalId, double amountToAdd) async {}
+
+  @override
+  Future<void> deleteGoal(String goalId) async {}
+
+  @override
+  Future<void> assignGoalToTransaction(String transactionId, String? goalId) async {}
 }
 
 
@@ -58,7 +74,7 @@ void main() {
     await tester.pumpWidget(DebtFreeApp(repository: FakeTransactionRepository()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Dashboard — Expenses by Category'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Dashboard'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.receipt_long_outlined));
     await tester.pumpAndSettle();

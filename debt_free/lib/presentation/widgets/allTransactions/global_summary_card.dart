@@ -8,6 +8,8 @@ class GlobalSummaryCard extends StatefulWidget {
   final double totalDebitExpenses;
   final double totalCreditExpenses;
   final int transactionCount;
+  final bool isTransfersOnly;
+  final VoidCallback? onToggleTransfersOnly;
 
   const GlobalSummaryCard({
     super.key,
@@ -17,6 +19,8 @@ class GlobalSummaryCard extends StatefulWidget {
     required this.totalDebitExpenses,
     required this.totalCreditExpenses,
     required this.transactionCount,
+    this.isTransfersOnly = false,
+    this.onToggleTransfersOnly,
   });
 
   @override
@@ -84,51 +88,60 @@ class _GlobalSummaryCardState extends State<GlobalSummaryCard> {
                 ),
               ],
             ),
-            AnimatedCrossFade(
-              firstChild: const SizedBox.shrink(),
-              secondChild: Column(
+            if (_isExpanded) ...[
+              const Divider(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  const Divider(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildSubStat(
-                        label: 'Debit Expenses',
-                        value: '-${currency.format(widget.totalDebitExpenses)}',
-                        color: Colors.orange.shade800,
+                  _buildSubStat(
+                    label: 'Debit Expenses',
+                    value: '-${currency.format(widget.totalDebitExpenses)}',
+                    color: Colors.orange.shade800,
+                  ),
+                  _buildSubStat(
+                    label: 'Credit Expenses',
+                    value: '-${currency.format(widget.totalCreditExpenses)}',
+                    color: Colors.purple.shade700,
+                  ),
+                  InkWell(
+                    onTap: widget.onToggleTransfersOnly,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: widget.isTransfersOnly
+                            ? Colors.blue.shade100
+                            : Colors.blue.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: widget.isTransfersOnly
+                              ? Colors.blue.shade700
+                              : Colors.blue.shade200,
+                        ),
                       ),
-                      _buildSubStat(
-                        label: 'Credit Expenses',
-                        value: '-${currency.format(widget.totalCreditExpenses)}',
-                        color: Colors.purple.shade700,
-                      ),
-                      _buildSubStat(
+                      child: _buildSubStat(
                         label: 'Transfers',
                         value: currency.format(widget.totalTransfers),
                         color: Colors.blue.shade700,
                       ),
-                      _buildSubStat(
-                        label: 'Net Cashflow',
-                        value:
-                            '${netBalance >= 0 ? '+' : '-'}${currency.format(netBalance.abs())}',
-                        color: netBalance >= 0
-                            ? Colors.green.shade700
-                            : Colors.red.shade700,
-                      ),
-                      _buildSubStat(
-                        label: 'Transactions',
-                        value: '${widget.transactionCount}',
-                        color: Colors.black87,
-                      ),
-                    ],
+                    ),
+                  ),
+                  _buildSubStat(
+                    label: 'Net Cashflow',
+                    value:
+                        '${netBalance >= 0 ? '+' : '-'}${currency.format(netBalance.abs())}',
+                    color: netBalance >= 0
+                        ? Colors.green.shade700
+                        : Colors.red.shade700,
+                  ),
+                  _buildSubStat(
+                    label: 'Transactions',
+                    value: '${widget.transactionCount}',
+                    color: Colors.black87,
                   ),
                 ],
               ),
-              crossFadeState: _isExpanded
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
-              duration: const Duration(milliseconds: 200),
-            ),
+            ],
           ],
         ),
       ),

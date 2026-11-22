@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/account_type.dart';
+import '../../domain/entities/goal.dart';
 import '../../domain/entities/transaction.dart';
-import '../../domain/entities/transaction_type.dart';
 import '../../domain/repositories/transaction_repository.dart';
-import '../widgets/global_summary_card.dart';
-import '../widgets/monthly_cashflow_section.dart';
+import '../widgets/allTransactions/expenses_bars.dart';
+import '../widgets/allTransactions/global_summary_card.dart';
+import '../widgets/allTransactions/monthly_cashflow_section.dart';
 
 class ExpensesPage extends StatefulWidget {
   final TransactionRepository repository;
@@ -18,12 +19,14 @@ class ExpensesPage extends StatefulWidget {
 
 class _ExpensesPageState extends State<ExpensesPage> {
   List<Transaction> _transactions = [];
+  List<Goal> _goals = [];
   bool _isLoading = true;
   List<String> _categories = ['Uncategorized'];
   bool _isSelectionMode = false;
   final Map<String, String> _pendingCategoryEdits = {};
   bool _rememberBulkRules = true;
   bool _onlyUncategorized = false;
+  bool _onlyTransfers = false;
 
   @override
   void initState() {
@@ -35,9 +38,12 @@ class _ExpensesPageState extends State<ExpensesPage> {
     setState(() => _isLoading = true);
     final items = await widget.repository.getLastTwelveMonthsTransactions();
     final cats = await widget.repository.getCategories();
+    final goals = await widget.repository.getGoals();
+    if (!mounted) return;
     setState(() {
       _transactions = items;
       _categories = cats.isEmpty ? ['Uncategorized'] : cats;
+      _goals = goals;
       _isLoading = false;
     });
   }
@@ -56,30 +62,18 @@ class _ExpensesPageState extends State<ExpensesPage> {
           'Do you want to append new transactions to existing data or replace everything?',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, null),
-            child: const Text('Cancel'),
-          ),
-          OutlinedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Replace all'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Append'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Cancel')),
+          OutlinedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Replace all')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Append')),
         ],
       ),
     );
 
-    if (replaceExisting == null) return;
-    await _executeSync(replaceExisting: replaceExisting);
+    if (replaceExisting != null) await _executeSync(replaceExisting: replaceExisting);
   }
 
   Future<void> _executeSync({required bool replaceExisting}) async {
-    final newCount = await widget.repository.syncFromSource(
-      replaceExisting: replaceExisting,
-    );
+    final newCount = await widget.repository.syncFromSource(replaceExisting: replaceExisting);
     await _loadTransactions();
 
     if (mounted) {
@@ -90,103 +84,44 @@ class _ExpensesPageState extends State<ExpensesPage> {
     }
   }
 
-  Future<void> _changeTransactionType(Transaction tx, TransactionType newType) async {
-    await widget.repository.updateTransactionType(tx.id, newType);
-    await _loadTransactions();
-  }
-
   Map<String, List<Transaction>> get _groupedByMonth {
     final Map<String, List<Transaction>> grouped = {};
     for (final tx in _transactions) {
-      if (_onlyUncategorized &&
+      if (_onlyTransfers) {
+        if (!tx.isTransfer) continue;
+      } else if (_onlyUncategorized &&
           tx.category != 'Uncategorized' &&
           !_pendingCategoryEdits.containsKey(tx.id)) {
         continue;
       }
       final key = DateFormat('yyyy-MM').format(tx.date);
       grouped.putIfAbsent(key, () => []).add(tx);
-      }
-      return grouped;
     }
+    return grouped;
+  }
 
   @override
   Widget build(BuildContext context) {
     final monthlyGroups = _groupedByMonth.entries.toList();
-
-    final totalExpenses = _transactions
-        .where((tx) => tx.isExpense)
-        .fold(0.0, (sum, tx) => sum + tx.absoluteAmount);
-
-    final totalIncomes = _transactions
-        .where((tx) => tx.isIncome)
-        .fold(0.0, (sum, tx) => sum + tx.absoluteAmount);
-
-    final totalTransfers = _transactions
-        .where((tx) => tx.isTransfer)
-        .fold(0.0, (sum, tx) => sum + tx.absoluteAmount);
-
-    final totalDebitExpenses = _transactions
-        .where((tx) => tx.isExpense && tx.account == AccountType.rbcChequing)
-        .fold(0.0, (sum, tx) => sum + tx.absoluteAmount);
-
-    final totalCreditExpenses = _transactions
-        .where((tx) => tx.isExpense && tx.account == AccountType.rbcVisa)
-        .fold(0.0, (sum, tx) => sum + tx.absoluteAmount);
-
-    final uncategorizedCount = _transactions
-        .where((tx) => tx.category == 'Uncategorized')
-        .length;
+    final expenses = _transactions.where((tx) => tx.isExpense);
+    final uncategorizedCount = _transactions.where((tx) => tx.category == 'Uncategorized').length;
+    final savingGoals = _goals.where((g) => g.type == GoalType.saving).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('DebtFree — Clear your debts !'),
-        actions: [
-          OutlinedButton.icon(
-            onPressed: () {
-              setState(() {
-                _isSelectionMode = !_isSelectionMode;
-                _pendingCategoryEdits.clear();
-              });
-            },
-            icon: Icon(_isSelectionMode ? Icons.close : Icons.checklist),
-            label: Text(_isSelectionMode ? 'Cancel Bulk' : 'Bulk Edit'),
-          ),
-          const SizedBox(width: 8),
-          FilledButton.icon(
-            onPressed: _handleRefresh,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Refresh'),
-          ),
-          const SizedBox(width: 16),
-        ],
+      appBar: ExpensesAppBar(
+        isSelectionMode: _isSelectionMode,
+        onToggleSelectionMode: () => setState(() {
+          _isSelectionMode = !_isSelectionMode;
+          _pendingCategoryEdits.clear();
+        }),
+        onRefresh: _handleRefresh,
       ),
       bottomNavigationBar: _isSelectionMode
-          ? BottomAppBar(
-              child: Row(
-                children: [
-                  Text(
-                    '${_pendingCategoryEdits.length} modified',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _rememberBulkRules,
-                        onChanged: (val) =>
-                            setState(() => _rememberBulkRules = val ?? true),
-                      ),
-                      const Text('Remember rules', style: TextStyle(fontSize: 13)),
-                    ],
-                  ),
-                  const SizedBox(width: 16),
-                  FilledButton.icon(
-                    onPressed: _pendingCategoryEdits.isEmpty ? null : _saveAllBulkEdits,
-                    icon: const Icon(Icons.save),
-                    label: const Text('Save All'),
-                  ),
-                ],
-              ),
+          ? BulkEditBottomBar(
+              modifiedCount: _pendingCategoryEdits.length,
+              rememberRules: _rememberBulkRules,
+              onRememberChanged: (val) => setState(() => _rememberBulkRules = val),
+              onSaveAll: _saveAllBulkEdits,
             )
           : null,
       body: _isLoading
@@ -194,25 +129,22 @@ class _ExpensesPageState extends State<ExpensesPage> {
           : Column(
               children: [
                 GlobalSummaryCard(
-                  totalExpenses: totalExpenses,
-                  totalIncomes: totalIncomes,
-                  totalTransfers: totalTransfers,
-                  totalDebitExpenses: totalDebitExpenses,
-                  totalCreditExpenses: totalCreditExpenses,
+                  totalExpenses: expenses.fold(0.0, (s, tx) => s + tx.absoluteAmount),
+                  totalIncomes: _transactions.where((tx) => tx.isIncome).fold(0.0, (s, tx) => s + tx.absoluteAmount),
+                  totalTransfers: _transactions.where((tx) => tx.isTransfer).fold(0.0, (s, tx) => s + tx.absoluteAmount),
+                  totalDebitExpenses: expenses.where((tx) => tx.account == AccountType.rbcChequing).fold(0.0, (s, tx) => s + tx.absoluteAmount),
+                  totalCreditExpenses: expenses.where((tx) => tx.account == AccountType.rbcVisa).fold(0.0, (s, tx) => s + tx.absoluteAmount),
                   transactionCount: _transactions.length,
+                  isTransfersOnly: _onlyTransfers,
+                  onToggleTransfersOnly: () => setState(() {
+                    _onlyTransfers = !_onlyTransfers;
+                    if (_onlyTransfers) _onlyUncategorized = false;
+                  }),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  child: Row(
-                    children: [
-                      FilterChip(
-                        avatar: const Icon(Icons.filter_list, size: 16),
-                        label: Text('Uncategorized only ($uncategorizedCount)'),
-                        selected: _onlyUncategorized,
-                        onSelected: (val) => setState(() => _onlyUncategorized = val),
-                      ),
-                    ],
-                  ),
+                ExpensesFilterBar(
+                  uncategorizedCount: uncategorizedCount,
+                  onlyUncategorized: _onlyUncategorized,
+                  onUncategorizedChanged: (val) => setState(() => _onlyUncategorized = val),
                 ),
                 Expanded(
                   child: monthlyGroups.isEmpty
@@ -226,24 +158,37 @@ class _ExpensesPageState extends State<ExpensesPage> {
                           itemCount: monthlyGroups.length,
                           itemBuilder: (context, index) {
                             final entry = monthlyGroups[index];
-                            final monthDate = DateTime.parse('${entry.key}-01');
-                            final monthTitle = DateFormat('MMMM yyyy').format(monthDate);
-
-                            final expenses = entry.value.where((tx) => tx.isExpense).toList();
-                            final incomes = entry.value.where((tx) => tx.isIncome).toList();
-                            final transfers = entry.value.where((tx) => tx.isTransfer).toList();
+                            final monthTitle = DateFormat('MMMM yyyy').format(DateTime.parse('${entry.key}-01'));
 
                             return MonthlyCashflowSection(
+                              key: ValueKey(entry.key),
                               monthTitle: monthTitle,
-                              expenses: expenses,
-                              incomes: incomes,
-                              transfers: transfers,
+                              expenses: entry.value.where((tx) => tx.isExpense).toList(),
+                              incomes: entry.value.where((tx) => tx.isIncome).toList(),
+                              transfers: entry.value.where((tx) => tx.isTransfer).toList(),
                               categories: _categories,
+                              savingGoals: savingGoals,
                               isSelectionMode: _isSelectionMode,
                               pendingCategoryEdits: _pendingCategoryEdits,
-                              onStageCategoryEdit: _stageCategoryEdit,
-                              onChangeType: _changeTransactionType,
-                              onAssignCategory: _assignSingleCategory,
+                              showTransfersOnly: _onlyTransfers,
+                              onStageCategoryEdit: (id, cat) => setState(() => _pendingCategoryEdits[id] = cat),
+                              onChangeType: (tx, type) async {
+                                await widget.repository.updateTransactionType(tx.id, type);
+                                await _loadTransactions();
+                              },
+                              onAssignCategory: (tx, cat, remember) async {
+                                await widget.repository.assignCategoryToMerchant(
+                                  transactionId: tx.id,
+                                  merchant: tx.merchant,
+                                  category: cat,
+                                  rememberForFuture: remember,
+                                );
+                                await _loadTransactions();
+                              },
+                              onAssignGoal: (tx, goalId) async {
+                                await widget.repository.assignGoalToTransaction(tx.id, goalId);
+                                await _loadTransactions();
+                              },
                             );
                           },
                         ),
@@ -253,30 +198,13 @@ class _ExpensesPageState extends State<ExpensesPage> {
     );
   }
 
-  Future<void> _assignSingleCategory(Transaction tx, String category, bool remember) async {
-    await widget.repository.assignCategoryToMerchant(
-      transactionId: tx.id,
-      merchant: tx.merchant,
-      category: category,
-      rememberForFuture: remember,
-    );
-    await _loadTransactions();
-  }
-
-  void _stageCategoryEdit(String txId, String newCategory) {
-    setState(() {
-      _pendingCategoryEdits[txId] = newCategory;
-    });
-  }
-
   Future<void> _saveAllBulkEdits() async {
     if (_pendingCategoryEdits.isEmpty) return;
 
-    final Map<Transaction, String> updates = {};
-    for (final entry in _pendingCategoryEdits.entries) {
-      final tx = _transactions.firstWhere((t) => t.id == entry.key);
-      updates[tx] = entry.value;
-    }
+    final Map<Transaction, String> updates = {
+      for (final entry in _pendingCategoryEdits.entries)
+        _transactions.firstWhere((t) => t.id == entry.key): entry.value,
+    };
 
     await widget.repository.saveBulkCategoryMap(
       updates: updates,
@@ -296,5 +224,4 @@ class _ExpensesPageState extends State<ExpensesPage> {
       );
     }
   }
-
 }

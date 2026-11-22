@@ -9,6 +9,7 @@ class Transaction {
   final String merchant;
   final String category;
   final TransactionType type;
+  final String? goalId;
 
   const Transaction({
     required this.id,
@@ -18,6 +19,7 @@ class Transaction {
     required this.merchant,
     required this.type,
     this.category = 'Uncategorized',
+    this.goalId
   });
 
   bool get isExpense => type == TransactionType.expense;
@@ -28,6 +30,7 @@ class Transaction {
   Transaction copyWith({
     TransactionType? type,
     String? category,
+    String? goalId,
   }) {
     return Transaction(
       id: id,
@@ -37,6 +40,7 @@ class Transaction {
       merchant: merchant,
       type: type ?? this.type,
       category: category ?? this.category,
+      goalId: goalId ?? this.goalId,
     );
   }
 }

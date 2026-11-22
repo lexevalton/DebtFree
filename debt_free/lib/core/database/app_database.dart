@@ -23,7 +23,7 @@ class AppDatabase {
 
 _db = await openDatabase(
       dbFile.path,
-      version: 3,
+      version: 4,
       onConfigure: (db) async {
         await db.execute('PRAGMA journal_mode = DELETE;');
       },
@@ -37,9 +37,11 @@ _db = await openDatabase(
             merchant TEXT NOT NULL,
             type TEXT NOT NULL DEFAULT 'expense',
             category TEXT NOT NULL DEFAULT 'Uncategorized'
+            goal_id TEXT
           )
         ''');
         await _createCategoryTables(db);
+        await _createGoalsTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -52,6 +54,10 @@ _db = await openDatabase(
         }
         if (oldVersion < 3) {
           await _createCategoryTables(db);
+        }
+        if (oldVersion < 4) {
+          await _createGoalsTable(db);
+          await db.execute('ALTER TABLE transactions ADD COLUMN goal_id TEXT;');
         }
       },
     );
@@ -99,6 +105,20 @@ _db = await openDatabase(
         conflictAlgorithm: ConflictAlgorithm.ignore,
       );
     }
+  }
+
+  static Future<void> _createGoalsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS goals (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        target_amount REAL NOT NULL,
+        allocated_amount REAL NOT NULL DEFAULT 0,
+        category_name TEXT,
+        notes TEXT NOT NULL DEFAULT ''
+      )
+    ''');
   }
 
 }
