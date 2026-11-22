@@ -15,6 +15,7 @@ class LeftMenuPage extends StatefulWidget {
 
 class _LeftMenuPageState extends State<LeftMenuPage> {
   int _selectedIndex = 0;
+  bool _isMenuExtended = true;
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +31,23 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
           NavigationRail(
             selectedIndex: _selectedIndex,
             onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
-            extended: MediaQuery.of(context).size.width >= 800,
-            leading: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Icon(Icons.account_balance_wallet, size: 32, color: Colors.blue),
+            extended: _isMenuExtended,
+            leading: Padding(          // <-- REMPLACE TON ANCIEN "leading:" PAR CE BLOC
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_isMenuExtended) ...[
+                    const Icon(Icons.account_balance_wallet, size: 32, color: Colors.blue),
+                    const SizedBox(width: 8),
+                  ],
+                  IconButton(
+                    icon: Icon(_isMenuExtended ? Icons.menu_open : Icons.menu),
+                    tooltip: _isMenuExtended ? 'Fermer le menu' : 'Ouvrir le menu',
+                    onPressed: () => setState(() => _isMenuExtended = !_isMenuExtended),
+                  ),
+                ],
+              ),
             ),
             destinations: const [
               NavigationRailDestination(

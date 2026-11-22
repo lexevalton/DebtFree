@@ -3,6 +3,7 @@ import 'package:debt_free/domain/entities/transaction_type.dart';
 import 'package:debt_free/domain/repositories/transaction_repository.dart';
 import 'package:debt_free/main.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 
 class FakeTransactionRepository implements TransactionRepository {
   @override
@@ -18,7 +19,7 @@ class FakeTransactionRepository implements TransactionRepository {
   Future<List<String>> getCategories() async => ['Uncategorized'];
 
   @override
-  Future<void> addCategory(String name) async {}
+  Future<void> addCategory(String name, {int? color}) async {}
 
   @override
   Future<void> deleteCategory(String name) async {}
@@ -46,6 +47,9 @@ class FakeTransactionRepository implements TransactionRepository {
 
   @override
   Future<void> saveBulkCategoryMap({required Map<Transaction, String> updates, bool rememberRules = true}) async {}
+
+  @override
+  Future<Map<String, int>> getCategoryColors() async => {};
 }
 
 
@@ -55,6 +59,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Dashboard — Expenses by Category'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.receipt_long_outlined));
+    await tester.pumpAndSettle();
     expect(find.text('Refresh'), findsOneWidget);
   });
 }

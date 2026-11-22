@@ -128,12 +128,27 @@ class SqliteTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<void> addCategory(String name) async {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) return;
+  Future<void> addCategory(String name, {int? color}) async {
     final db = await AppDatabase.instance;
-    await db.insert('categories', {'name': trimmed}, conflictAlgorithm: ConflictAlgorithm.ignore);
+    await db.insert(
+      'categories',
+      {
+        'name': name,
+        'color': color ?? 0xFF78909C,
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
     await _syncProvider.pushDatabase(await AppDatabase.getDatabaseFile());
+  }
+
+  @override
+  Future<Map<String, int>> getCategoryColors() async {
+    final db = await AppDatabase.instance;
+    final rows = await db.query('categories');
+    return {
+      for (final row in rows)
+        row['name'] as String: (row['color'] as int?) ?? 0xFF78909C,
+    };
   }
 
   @override

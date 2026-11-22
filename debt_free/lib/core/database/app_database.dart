@@ -62,7 +62,8 @@ _db = await openDatabase(
   static Future<void> _createCategoryTables(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS categories (
-        name TEXT PRIMARY KEY
+        name TEXT PRIMARY KEY,
+        color INTEGER NOT NULL DEFAULT 4286091420
       )
     ''');
     await db.execute('''
@@ -99,4 +100,5 @@ _db = await openDatabase(
       );
     }
   }
+
 }

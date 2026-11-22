@@ -6,7 +6,8 @@ abstract interface class TransactionRepository {
   Future<List<Transaction>> getLastTwelveMonthsTransactions();
   Future<void> updateTransactionType(String id, TransactionType newType);
     Future<List<String>> getCategories();
-  Future<void> addCategory(String name);
+  Future<void> addCategory(String name, {int? color});
+  Future<Map<String, int>> getCategoryColors();
   Future<void> deleteCategory(String name);
   Future<Map<String, String>> getCategoryRules();
   Future<void> deleteCategoryRule(String merchantPattern);

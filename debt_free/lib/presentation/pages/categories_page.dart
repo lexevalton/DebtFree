@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/repositories/transaction_repository.dart';
+import '../widgets/gradiant_color_slider.dart';
 
 class CategoriesPage extends StatefulWidget {
   final TransactionRepository repository;
@@ -15,6 +16,10 @@ class _CategoriesPageState extends State<CategoriesPage> {
   List<String> _categories = [];
   Map<String, String> _rules = {};
   bool _isLoading = true;
+  double _hue = 180.0;        // 0..360
+
+  Color get _selectedColor =>
+      HSLColor.fromAHSL(1.0, _hue, 0.78, 0.45).toColor();
 
   @override
   void initState() {
@@ -49,23 +54,62 @@ class _CategoriesPageState extends State<CategoriesPage> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Row(
+                                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        decoration: const InputDecoration(
-                          labelText: 'New Category Name',
-                          border: OutlineInputBorder(),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            decoration: const InputDecoration(
+                              labelText: 'New Category Name',
+                              border: OutlineInputBorder(),
+                            ),
+                            onSubmitted: (_) => _createCategory(),
+                          ),
                         ),
-                        onSubmitted: (_) => _createCategory(),
-                      ),
+                        const SizedBox(width: 12),
+                        FilledButton.icon(
+                          onPressed: _createCategory,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: _createCategory,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add'),
+                    const SizedBox(height: 10),
+                                       const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        // Live color preview
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: _selectedColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.black26, width: 1.5),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: 
+                              // Hue gradient bar (0 to 360)
+                              GradientColorSlider(
+                                value: _hue / 360.0,
+                                colors: const [
+                                  Color(0xFFFF0000),
+                                  Color(0xFFFFFF00),
+                                  Color(0xFF00FF00),
+                                  Color(0xFF00FFFF),
+                                  Color(0xFF0000FF),
+                                  Color(0xFFFF00FF),
+                                  Color(0xFFFF0000),
+                                ],
+                                onChanged: (v) => setState(() => _hue = v * 360.0),
+                              ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
