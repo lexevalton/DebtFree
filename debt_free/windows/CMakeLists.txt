@@ -1,5 +1,6 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
+list(APPEND CMAKE_PROGRAM_PATH "C:/nuget")
 project(debt_free LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
@@ -30,7 +31,8 @@ set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 
 # Use Unicode for all projects.
-add_definitions(-DUNICODE -D_UNICODE)
+add_definitions(-DUNICODE -D_UNICODE -D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+add_compile_options(/FS)
 
 # Compilation settings that should be applied to most targets.
 #

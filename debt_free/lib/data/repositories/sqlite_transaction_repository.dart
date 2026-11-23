@@ -12,20 +12,28 @@ import 'sqlite_goals_mixin.dart';
 class SqliteTransactionRepository
     with SqliteCategoryMixin, SqliteGoalMixin
     implements TransactionRepository {
-  final TransactionSource _source;
+  @override
+  final TransactionSource csvSource;
+
+  @override
+  final TransactionSource webSyncSource;
 
   @override
   final CloudSyncProvider syncProvider;
 
   SqliteTransactionRepository({
-    required TransactionSource source,
-    required CloudSyncProvider syncProvider,
-  })  : _source = source,
-        syncProvider = syncProvider;
+    required this.csvSource,
+    required this.webSyncSource,
+    required this.syncProvider,
+  });
 
   @override
-  Future<int> syncFromSource({bool replaceExisting = false}) async {
-    final incoming = await _source.fetchTransactions();
+  Future<int> syncFromSource({
+    TransactionSource? source,
+    bool replaceExisting = false,
+  }) async {
+    final activeSource = source ?? webSyncSource;
+    final incoming = await activeSource.fetchTransactions();
     if (incoming.isEmpty) return 0;
 
     final db = await AppDatabase.instance;

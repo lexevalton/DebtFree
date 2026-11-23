@@ -6,6 +6,7 @@ import '../../domain/entities/transaction.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../widgets/allTransactions/expenses_bars.dart';
 import '../widgets/allTransactions/global_summary_card.dart';
+import '../widgets/allTransactions/import_source_dialog.dart';
 import '../widgets/allTransactions/monthly_cashflow_section.dart';
 
 class ExpensesPage extends StatefulWidget {
@@ -49,35 +50,24 @@ class _ExpensesPageState extends State<ExpensesPage> {
   }
 
   Future<void> _handleRefresh() async {
-    if (_transactions.isEmpty) {
-      await _executeSync(replaceExisting: false);
-      return;
-    }
-
-    final replaceExisting = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Import Transactions'),
-        content: const Text(
-          'Do you want to append new transactions to existing data or replace everything?',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Cancel')),
-          OutlinedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Replace all')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Append')),
-        ],
-      ),
+    final selection = await showImportSourceDialog(
+      context,
+      hasExistingData: _transactions.isNotEmpty,
     );
+    if (selection == null) return;
 
-    if (replaceExisting != null) await _executeSync(replaceExisting: replaceExisting);
-  }
+    final chosenSource = selection.method == ImportMethod.webSync
+        ? widget.repository.webSyncSource
+        : widget.repository.csvSource;
 
-  Future<void> _executeSync({required bool replaceExisting}) async {
-    final newCount = await widget.repository.syncFromSource(replaceExisting: replaceExisting);
+    final newCount = await widget.repository.syncFromSource(
+      source: chosenSource,
+      replaceExisting: selection.replaceExisting,
+    );
     await _loadTransactions();
 
     if (mounted) {
-      final msg = replaceExisting
+      final msg = selection.replaceExisting
           ? 'Database replaced with $newCount transactions.'
           : 'Added $newCount new transactions.';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -150,7 +140,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   child: monthlyGroups.isEmpty
                       ? const Center(
                           child: Text(
-                            'No transactions yet.\nClick "Refresh" to import your RBC CSVs.',
+                            'No transactions yet.\nClick "Refresh" to sync with RBC or import CSVs.',
                             textAlign: TextAlign.center,
                           ),
                         )

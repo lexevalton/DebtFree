@@ -1,9 +1,17 @@
+import '../../data/sources/transaction_source.dart';
 import '../entities/transaction.dart';
 import '../entities/transaction_type.dart';
 import '../entities/goal.dart';
 
 abstract interface class TransactionRepository {
-  Future<int> syncFromSource({bool replaceExisting = false});
+  TransactionSource get csvSource;
+  TransactionSource get webSyncSource;
+
+  Future<int> syncFromSource({
+    TransactionSource? source,
+    bool replaceExisting = false,
+  });
+
   Future<List<Transaction>> getLastTwelveMonthsTransactions();
   Future<void> updateTransactionType(String id, TransactionType newType);
   Future<List<String>> getCategories();
