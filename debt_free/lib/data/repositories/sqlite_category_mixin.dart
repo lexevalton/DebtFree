@@ -33,6 +33,27 @@ mixin SqliteCategoryMixin {
     };
   }
 
+  Future<Set<String>> getTrackedCategories() async {
+    final db = await AppDatabase.instance;
+    final rows = await db.query(
+      'categories',
+      columns: ['name'],
+      where: 'is_tracked = 1',
+    );
+    return rows.map((r) => r['name'] as String).toSet();
+  }
+
+  Future<void> setCategoryTracked(String categoryName, bool isTracked) async {
+    final db = await AppDatabase.instance;
+    await db.update(
+      'categories',
+      {'is_tracked': isTracked ? 1 : 0},
+      where: 'name = ?',
+      whereArgs: [categoryName],
+    );
+    await syncProvider.pushDatabase(await AppDatabase.getDatabaseFile());
+  }
+
   Future<void> deleteCategory(String name) async {
     if (name == 'Uncategorized') return;
     final db = await AppDatabase.instance;

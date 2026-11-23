@@ -3,7 +3,11 @@ import '../../domain/entities/goal.dart';
 import '../../domain/entities/transaction.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../../domain/usecases/calculate_safe_to_spend.dart';
+import '../../domain/usecases/compare_monthly_spending.dart';
+import '../../domain/usecases/detect_recurring_subscriptions.dart';
 import '../widgets/dashboard/dashboard_goals_card.dart';
+import '../widgets/dashboard/month_comparison_card.dart';
+import '../widgets/dashboard/recurring_subscriptions_card.dart';
 import '../widgets/dashboard/safe_to_spend_banner.dart';
 import '../widgets/expensesPieChart/category_pie_chart_card.dart';
 import '../widgets/expensesPieChart/category_transactions_card.dart';
@@ -19,9 +23,13 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final _calculateSafeToSpend = CalculateSafeToSpend();
+  final _detectRecurring = DetectRecurringSubscriptions();
+  final _compareMonthly = CompareMonthlySpending();
 
   List<Transaction> _transactions = [];
   List<Goal> _goals = [];
+  List<String> _allCategories = [];
+  Set<String> _trackedCategories = {};
   Map<String, Color> _dbCategoryColors = {};
   DashboardPeriod _selectedPeriod = DashboardPeriod.currentMonth;
   String? _selectedCategory;
@@ -38,13 +46,29 @@ class _DashboardPageState extends State<DashboardPage> {
     final items = await widget.repository.getLastTwelveMonthsTransactions();
     final colors = await widget.repository.getCategoryColors();
     final goals = await widget.repository.getGoals();
+    final categories = await widget.repository.getCategories();
+    final tracked = await widget.repository.getTrackedCategories();
     if (!mounted) return;
     setState(() {
       _transactions = items;
       _dbCategoryColors = colors.map((k, v) => MapEntry(k, Color(v)));
       _goals = goals;
+      _allCategories = categories;
+      _trackedCategories = tracked;
       _isLoading = false;
     });
+  }
+
+  Future<void> _handleToggleTrackedCategory(String category, bool isTracked) async {
+    await widget.repository.setCategoryTracked(category, isTracked);
+    final updated = Set<String>.from(_trackedCategories);
+    if (isTracked) {
+      updated.add(category);
+    } else {
+      updated.remove(category);
+    }
+    if (!mounted) return;
+    setState(() => _trackedCategories = updated);
   }
 
   List<Transaction> _filterExpensesByPeriod(List<Transaction> allExpenses) {
@@ -70,7 +94,13 @@ class _DashboardPageState extends State<DashboardPage> {
     final selectedTxs = _selectedCategory == null
         ? <Transaction>[]
         : periodExpenses.where((tx) => tx.category == _selectedCategory).toList();
+
     final safeToSpend = _calculateSafeToSpend(_transactions);
+    final recurringSummary = _detectRecurring(
+      _transactions,
+      trackedCategories: _trackedCategories,
+    );
+    final monthComparison = _compareMonthly(_transactions);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dashboard')),
@@ -131,6 +161,23 @@ class _DashboardPageState extends State<DashboardPage> {
                                 child: DashboardGoalsCard(
                                   goals: _goals,
                                   allTransactions: _transactions,
+                                ),
+                              ),
+                              SizedBox(
+                                width: cardWidth,
+                                height: cardHeight,
+                                child: RecurringSubscriptionsCard(
+                                  summary: recurringSummary,
+                                  allCategories: _allCategories,
+                                  trackedCategories: _trackedCategories,
+                                  onToggleCategory: _handleToggleTrackedCategory,
+                                ),
+                              ),
+                              SizedBox(
+                                width: cardWidth,
+                                height: cardHeight,
+                                child: MonthComparisonCard(
+                                  comparison: monthComparison,
                                 ),
                               ),
                             ],

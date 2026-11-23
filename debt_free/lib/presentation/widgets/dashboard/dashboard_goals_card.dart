@@ -41,9 +41,22 @@ class DashboardGoalsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Goals & Monthly Limits',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            Tooltip(
+              message:
+                  'Tracks your Saving goals (allocated surplus + linked transfers)\n'
+                  'and monthly category Restrictions (green when under limit, red when exceeded).',
+              waitDuration: const Duration(milliseconds: 200),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Goals & Monthly Limits',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(Icons.help_outline, size: 15, color: Colors.grey.shade600),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             Expanded(

@@ -9,6 +9,8 @@ abstract interface class TransactionRepository {
   Future<List<String>> getCategories();
   Future<void> addCategory(String name, {int? color});
   Future<Map<String, int>> getCategoryColors();
+  Future<Set<String>> getTrackedCategories();
+  Future<void> setCategoryTracked(String categoryName, bool isTracked);
   Future<void> deleteCategory(String name);
   Future<Map<String, String>> getCategoryRules();
   Future<void> deleteCategoryRule(String merchantPattern);
@@ -31,7 +33,7 @@ abstract interface class TransactionRepository {
     bool rememberRules = true,
   });
 
-Future<void> saveBulkCategoryMap({
+  Future<void> saveBulkCategoryMap({
     required Map<Transaction, String> updates,
     bool rememberRules = true,
   });
