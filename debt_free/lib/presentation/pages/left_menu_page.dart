@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/database/app_database.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../../theme/app_theme.dart';
+import 'bank_profiles_page.dart';
 import 'categories_page.dart';
 import 'dashboard_page.dart';
 import 'expenses_page.dart';
@@ -39,6 +40,7 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
       ExpensesPage(key: ValueKey('exp_$_reloadTick'), repository: widget.repository),
       CategoriesPage(key: ValueKey('cat_$_reloadTick'), repository: widget.repository),
       GoalsPage(key: ValueKey('goal_$_reloadTick'), repository: widget.repository),
+      BankProfilesPage(key: ValueKey('bank_$_reloadTick'), repository: widget.repository),
     ];
 
     return Scaffold(
@@ -52,10 +54,7 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
             indicatorColor: AppColors.menuSelected,
             selectedIconTheme: const IconThemeData(color: AppColors.primaryDark),
             unselectedIconTheme: const IconThemeData(color: AppColors.textSecondary),
-            selectedLabelTextStyle: const TextStyle(
-              color: AppColors.primaryDark,
-              fontWeight: FontWeight.w600,
-            ),
+            selectedLabelTextStyle: const TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.w600),
             unselectedLabelTextStyle: const TextStyle(color: AppColors.textSecondary),
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -67,11 +66,7 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
                     const SizedBox(width: 8),
                     const Text(
                       'DebtFree',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryDark,
-                      ),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -95,9 +90,7 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
                           tooltip: 'Database: ${_activeProfile.label}',
                           icon: Icon(
                             Icons.storage,
-                            color: _activeProfile == DatabaseProfile.real
-                                ? AppColors.primary
-                                : AppColors.warning,
+                            color: _activeProfile == DatabaseProfile.real ? AppColors.primary : AppColors.warning,
                           ),
                           onPressed: () => setState(() => _isMenuExtended = true),
                         ),
@@ -125,15 +118,20 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
                 selectedIcon: Icon(Icons.flag),
                 label: Text('Goals'),
               ),
+              NavigationRailDestination(
+                icon: Icon(Icons.account_balance_outlined),
+                selectedIcon: Icon(Icons.account_balance),
+                label: Text('Accounts'),
+              ),
             ],
           ),
           const VerticalDivider(thickness: 1, width: 1, color: AppColors.border),
           Expanded(
             child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: pages[_selectedIndex],
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: pages[_selectedIndex],
+            ),
           ),
-        ),
         ],
       ),
     );
@@ -143,22 +141,16 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
-        color: _activeProfile == DatabaseProfile.real
-            ? AppColors.background
-            : AppColors.warning.withValues(alpha: 0.14),
+        color: _activeProfile == DatabaseProfile.real ? AppColors.background : AppColors.warning.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: _activeProfile == DatabaseProfile.real ? AppColors.border : AppColors.warning,
-        ),
+        border: Border.all(color: _activeProfile == DatabaseProfile.real ? AppColors.border : AppColors.warning),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<DatabaseProfile>(
           value: _activeProfile,
           isDense: true,
           style: const TextStyle(fontSize: 12.5, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-          items: DatabaseProfile.values
-              .map((p) => DropdownMenuItem(value: p, child: Text(p.label)))
-              .toList(),
+          items: DatabaseProfile.values.map((p) => DropdownMenuItem(value: p, child: Text(p.label))).toList(),
           onChanged: _onProfileChanged,
         ),
       ),

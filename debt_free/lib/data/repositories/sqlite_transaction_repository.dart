@@ -6,11 +6,12 @@ import '../../domain/entities/transaction.dart';
 import '../../domain/entities/transaction_type.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../sources/transaction_source.dart';
+import 'sqlite_bank_profile_mixin.dart';
 import 'sqlite_category_mixin.dart';
 import 'sqlite_goals_mixin.dart';
 
 class SqliteTransactionRepository
-    with SqliteCategoryMixin, SqliteGoalMixin
+    with SqliteCategoryMixin, SqliteGoalMixin, SqliteBankProfileMixin
     implements TransactionRepository {
   @override
   final TransactionSource csvSource;
@@ -70,12 +71,7 @@ class SqliteTransactionRepository
   @override
   Future<void> updateTransactionType(String id, TransactionType newType) async {
     final db = await AppDatabase.instance;
-    await db.update(
-      'transactions',
-      {'type': newType.name},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.update('transactions', {'type': newType.name}, where: 'id = ?', whereArgs: [id]);
     await syncProvider.pushDatabase(await AppDatabase.getDatabaseFile());
   }
 
@@ -125,9 +121,7 @@ class SqliteTransactionRepository
   String? _findMatchingCategory(String merchant, Map<String, String> rules) {
     final upperMerchant = merchant.toUpperCase();
     for (final entry in rules.entries) {
-      if (upperMerchant.contains(entry.key.toUpperCase())) {
-        return entry.value;
-      }
+      if (upperMerchant.contains(entry.key.toUpperCase())) return entry.value;
     }
     return null;
   }

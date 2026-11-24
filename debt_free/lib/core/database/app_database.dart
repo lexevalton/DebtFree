@@ -50,7 +50,7 @@ class AppDatabase {
 
     _db = await openDatabase(
       dbFile.path,
-      version: 5,
+      version: 6,
       onConfigure: (db) async {
         await db.execute('PRAGMA journal_mode = DELETE;');
       },
@@ -69,6 +69,7 @@ class AppDatabase {
         ''');
         await _createCategoryTables(db);
         await _createGoalsTable(db);
+        await _createBankProfilesTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -82,6 +83,9 @@ class AppDatabase {
         }
         if (oldVersion < 5) {
           await db.execute('ALTER TABLE categories ADD COLUMN is_tracked INTEGER NOT NULL DEFAULT 0;');
+        }
+        if (oldVersion < 6) {
+          await _createBankProfilesTable(db);
         }
       },
     );
@@ -125,6 +129,20 @@ class AppDatabase {
         allocated_amount REAL NOT NULL DEFAULT 0,
         category_name TEXT,
         notes TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+  }
+
+  static Future<void> _createBankProfilesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS bank_profiles (
+        id TEXT PRIMARY KEY,
+        institution TEXT NOT NULL,
+        account_name TEXT NOT NULL,
+        account_type TEXT NOT NULL,
+        last_four TEXT NOT NULL DEFAULT '',
+        is_active INTEGER NOT NULL DEFAULT 1,
+        last_synced_at TEXT
       )
     ''');
   }

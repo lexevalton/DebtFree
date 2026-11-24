@@ -1,7 +1,8 @@
 import '../../data/sources/transaction_source.dart';
+import '../entities/bank_account_profile.dart';
+import '../entities/goal.dart';
 import '../entities/transaction.dart';
 import '../entities/transaction_type.dart';
-import '../entities/goal.dart';
 
 abstract interface class TransactionRepository {
   TransactionSource get csvSource;
@@ -27,6 +28,12 @@ abstract interface class TransactionRepository {
   Future<void> allocateToGoal(String goalId, double amountToAdd);
   Future<void> deleteGoal(String goalId);
   Future<void> assignGoalToTransaction(String transactionId, String? goalId);
+
+  Future<List<BankAccountProfile>> getBankProfiles();
+  Future<void> addBankProfile(BankAccountProfile profile);
+  Future<void> toggleBankProfileActive(String id, bool isActive);
+  Future<void> deleteBankProfile(String id);
+  Future<void> markProfilesSynced(List<String> ids);
 
   Future<void> assignCategoryToMerchant({
     required String transactionId,

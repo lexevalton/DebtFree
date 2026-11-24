@@ -1,4 +1,5 @@
 import 'package:debt_free/data/sources/transaction_source.dart';
+import 'package:debt_free/domain/entities/bank_account_profile.dart';
 import 'package:debt_free/domain/entities/goal.dart';
 import 'package:debt_free/domain/entities/transaction.dart';
 import 'package:debt_free/domain/entities/transaction_type.dart';
@@ -23,11 +24,7 @@ class FakeTransactionRepository implements TransactionRepository {
   TransactionSource get webSyncSource => FakeTransactionSource();
 
   @override
-  Future<int> syncFromSource({
-    TransactionSource? source,
-    bool replaceExisting = false,
-  }) async =>
-      0;
+  Future<int> syncFromSource({TransactionSource? source, bool replaceExisting = false}) async => 0;
 
   @override
   Future<List<Transaction>> getLastTwelveMonthsTransactions() async => [];
@@ -66,10 +63,7 @@ class FakeTransactionRepository implements TransactionRepository {
   }) async {}
 
   @override
-  Future<void> saveBulkCategoryMap({
-    required Map<Transaction, String> updates,
-    bool rememberRules = true,
-  }) async {}
+  Future<void> saveBulkCategoryMap({required Map<Transaction, String> updates, bool rememberRules = true}) async {}
 
   @override
   Future<Map<String, int>> getCategoryColors() async => {};
@@ -94,24 +88,33 @@ class FakeTransactionRepository implements TransactionRepository {
 
   @override
   Future<void> assignGoalToTransaction(String transactionId, String? goalId) async {}
+
+  @override
+  Future<List<BankAccountProfile>> getBankProfiles() async => [];
+
+  @override
+  Future<void> addBankProfile(BankAccountProfile profile) async {}
+
+  @override
+  Future<void> toggleBankProfileActive(String id, bool isActive) async {}
+
+  @override
+  Future<void> deleteBankProfile(String id) async {}
+
+  @override
+  Future<void> markProfilesSynced(List<String> ids) async {}
 }
 
 void main() {
-  testWidgets('DebtFreeApp renders empty state and Refresh button', (WidgetTester tester) async {
+  testWidgets('DebtFreeApp renders Dashboard and Accounts menu', (WidgetTester tester) async {
     final navigatorKey = GlobalKey<NavigatorState>();
 
     await tester.pumpWidget(
-      DebtFreeApp(
-        repository: FakeTransactionRepository(),
-        navigatorKey: navigatorKey,
-      ),
+      DebtFreeApp(repository: FakeTransactionRepository(), navigatorKey: navigatorKey),
     );
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(AppBar, 'Dashboard'), findsOneWidget);
-
-    await tester.tap(find.byIcon(Icons.receipt_long_outlined));
-    await tester.pumpAndSettle();
-    expect(find.text('Refresh'), findsOneWidget);
+    expect(find.text('Accounts'), findsOneWidget);
   });
 }
