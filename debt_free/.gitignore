@@ -48,4 +48,4 @@ app.*.map.json
 .widget_preview/
 
 # OAuth client secrets
-./resources/debtfree_desktop_client.json
+/resources/debtfree_desktop_client.json
