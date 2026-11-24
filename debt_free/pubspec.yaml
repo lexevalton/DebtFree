@@ -61,3 +61,5 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+  assets:
+    - resources/debtfree_desktop_client.json

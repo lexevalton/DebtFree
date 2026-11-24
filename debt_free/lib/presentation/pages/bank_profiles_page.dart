@@ -70,21 +70,9 @@ class _BankProfilesPageState extends State<BankProfilesPage> {
                   onChanged: (v) => setDialogState(() => selectedType = v ?? AccountType.rbcChequing),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Account Label (e.g. RBC Chequing, Avion Visa)',
-                  ),
-                ),
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Account Label (e.g. RBC Chequing, Avion Visa)')),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: digitsCtrl,
-                  maxLength: 4,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Last 4 digits (optional, helps auto-match)',
-                  ),
-                ),
+                TextField(controller: digitsCtrl, maxLength: 4, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Last 4 digits (optional)')),
               ],
             ),
           ),
@@ -92,18 +80,14 @@ class _BankProfilesPageState extends State<BankProfilesPage> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             FilledButton(
               onPressed: () {
-                final label = nameCtrl.text.trim();
-                if (label.isEmpty) return;
-                Navigator.pop(
-                  ctx,
-                  BankAccountProfile(
-                    id: 'acct_${DateTime.now().millisecondsSinceEpoch}',
-                    institution: institution,
-                    accountName: label,
-                    accountType: selectedType,
-                    lastFourDigits: digitsCtrl.text.trim(),
-                  ),
-                );
+                if (nameCtrl.text.trim().isEmpty) return;
+                Navigator.pop(ctx, BankAccountProfile(
+                  id: 'acct_${DateTime.now().millisecondsSinceEpoch}',
+                  institution: institution,
+                  accountName: nameCtrl.text.trim(),
+                  accountType: selectedType,
+                  lastFourDigits: digitsCtrl.text.trim(),
+                ));
               },
               child: const Text('Save Account'),
             ),
@@ -122,14 +106,11 @@ class _BankProfilesPageState extends State<BankProfilesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bank Accounts & Sync'),
+        title: const Text('Bank Accounts & Cards'),
         actions: [
           FilledButton.icon(
             onPressed: _openAddDialog,
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: AppColors.primaryDark,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.primaryDark),
             icon: const Icon(Icons.add, size: 18),
             label: const Text('Add Account'),
           ),
@@ -161,24 +142,19 @@ class _BankProfilesPageState extends State<BankProfilesPage> {
                             itemCount: _profiles.length,
                             itemBuilder: (context, i) {
                               final item = _profiles[i];
+                              final digits = item.lastFourDigits.isEmpty ? '' : ' •••• ${item.lastFourDigits}';
                               final syncText = item.lastSyncedAt == null
                                   ? 'Never synced yet'
                                   : 'Last synced: ${DateFormat('yyyy-MM-dd HH:mm').format(item.lastSyncedAt!)}';
-                              final digits = item.lastFourDigits.isEmpty ? '' : ' •••• ${item.lastFourDigits}';
 
                               return Card(
                                 margin: const EdgeInsets.only(bottom: 10),
                                 child: ListTile(
                                   leading: Icon(
-                                    item.accountType == AccountType.rbcVisa
-                                        ? Icons.credit_card
-                                        : Icons.account_balance,
+                                    item.accountType == AccountType.rbcVisa ? Icons.credit_card : Icons.account_balance,
                                     color: item.isActive ? AppColors.primary : Colors.grey,
                                   ),
-                                  title: Text(
-                                    '${item.institution} — ${item.accountName}$digits',
-                                    style: const TextStyle(fontWeight: FontWeight.w600),
-                                  ),
+                                  title: Text('${item.institution} — ${item.accountName}$digits', style: const TextStyle(fontWeight: FontWeight.w600)),
                                   subtitle: Text(syncText),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -186,8 +162,8 @@ class _BankProfilesPageState extends State<BankProfilesPage> {
                                       Switch(
                                         value: item.isActive,
                                         activeThumbColor: AppColors.primary,
-                                        onChanged: (val) async {
-                                          await widget.repository.toggleBankProfileActive(item.id, val);
+                                        onChanged: (v) async {
+                                          await widget.repository.toggleBankProfileActive(item.id, v);
                                           await _load();
                                         },
                                       ),

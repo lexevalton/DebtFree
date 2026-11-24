@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum ImportMethod { webSync, csvFile }
+enum ImportMethod { webSync, csvFile, openAccountsSetup }
 
 class ImportSelection {
   final ImportMethod method;
@@ -15,13 +15,14 @@ class ImportSelection {
 Future<ImportSelection?> showImportSourceDialog(
   BuildContext context, {
   required bool hasExistingData,
+  required bool hasActiveBankProfiles,
 }) async {
   final method = await showDialog<ImportMethod>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: const Text('Sync or Import Transactions'),
       content: const Text(
-        'Connect directly to RBC Online Banking to capture latest transactions, '
+        'Connect to RBC Online Banking to capture your configured accounts, '
         'or import a CSV statement manually.',
       ),
       actions: [
@@ -45,7 +46,31 @@ Future<ImportSelection?> showImportSourceDialog(
 
   if (method == null || !context.mounted) return null;
 
-  // WebView sync always appends safely with SHA-256 deduplication
+  if (method == ImportMethod.webSync && !hasActiveBankProfiles) {
+    final goSetup = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('No Active Bank Accounts'),
+        content: const Text(
+          'Please add and activate at least one RBC account or credit card in "Accounts" first '
+          'so DebtFree knows which accounts to open and download.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.account_balance_outlined),
+            label: const Text('Go to Accounts'),
+          ),
+        ],
+      ),
+    );
+    if (goSetup == true) {
+      return const ImportSelection(method: ImportMethod.openAccountsSetup, replaceExisting: false);
+    }
+    return null;
+  }
+
   if (method == ImportMethod.webSync || !hasExistingData) {
     return ImportSelection(method: method, replaceExisting: false);
   }
@@ -58,18 +83,9 @@ Future<ImportSelection?> showImportSourceDialog(
         'Do you want to append new transactions to existing data or replace everything?',
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, null),
-          child: const Text('Cancel'),
-        ),
-        OutlinedButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Replace all'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Append'),
-        ),
+        TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Cancel')),
+        OutlinedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Replace all')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Append')),
       ],
     ),
   );

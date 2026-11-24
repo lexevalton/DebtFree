@@ -8,6 +8,7 @@ import '../widgets/allTransactions/expenses_bars.dart';
 import '../widgets/allTransactions/global_summary_card.dart';
 import '../widgets/allTransactions/import_source_dialog.dart';
 import '../widgets/allTransactions/monthly_cashflow_section.dart';
+import 'bank_profiles_page.dart';
 
 class ExpensesPage extends StatefulWidget {
   final TransactionRepository repository;
@@ -50,11 +51,23 @@ class _ExpensesPageState extends State<ExpensesPage> {
   }
 
   Future<void> _handleRefresh() async {
+    final profiles = await widget.repository.getBankProfiles();
+    final hasActiveRbc = profiles.any((p) => p.isActive && p.institution.toUpperCase() == 'RBC');
+    if (!mounted) return;
+
     final selection = await showImportSourceDialog(
       context,
       hasExistingData: _transactions.isNotEmpty,
+      hasActiveBankProfiles: hasActiveRbc,
     );
-    if (selection == null) return;
+    if (selection == null || !mounted) return;
+
+    if (selection.method == ImportMethod.openAccountsSetup) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => BankProfilesPage(repository: widget.repository)),
+      );
+      return;
+    }
 
     final chosenSource = selection.method == ImportMethod.webSync
         ? widget.repository.webSyncSource

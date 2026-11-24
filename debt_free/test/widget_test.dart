@@ -1,3 +1,4 @@
+import 'package:debt_free/core/sync/local_only_sync.dart';
 import 'package:debt_free/data/sources/transaction_source.dart';
 import 'package:debt_free/domain/entities/bank_account_profile.dart';
 import 'package:debt_free/domain/entities/goal.dart';
@@ -110,7 +111,11 @@ void main() {
     final navigatorKey = GlobalKey<NavigatorState>();
 
     await tester.pumpWidget(
-      DebtFreeApp(repository: FakeTransactionRepository(), navigatorKey: navigatorKey),
+      DebtFreeApp(
+        repository: FakeTransactionRepository(),
+        syncProvider: LocalOnlySync(),
+        navigatorKey: navigatorKey,
+      ),
     );
     await tester.pumpAndSettle();
 
