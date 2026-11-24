@@ -46,3 +46,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# OAuth client secrets
+./resources/debtfree_desktop_client.json
