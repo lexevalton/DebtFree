@@ -2,13 +2,40 @@ import 'dart:io';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'demo_database_seeder.dart';
+
+enum DatabaseProfile {
+  real('debt_free.sqlite', 'Real Data'),
+  demoHealthy('debt_free_demo_healthy.sqlite', 'Demo: Healthy'),
+  demoDebt('debt_free_demo_debt.sqlite', 'Demo: In Debt');
+
+  final String fileName;
+  final String label;
+  const DatabaseProfile(this.fileName, this.label);
+}
 
 class AppDatabase {
   static Database? _db;
+  static DatabaseProfile _currentProfile = DatabaseProfile.real;
+
+  static DatabaseProfile get currentProfile => _currentProfile;
+
+  static Future<void> switchProfile(DatabaseProfile profile) async {
+    if (_currentProfile == profile && _db != null) return;
+    if (_db != null) {
+      await _db!.close();
+      _db = null;
+    }
+    _currentProfile = profile;
+    final db = await instance;
+    if (profile != DatabaseProfile.real) {
+      await DemoDatabaseSeeder.seedIfEmpty(db, isHealthy: profile == DatabaseProfile.demoHealthy);
+    }
+  }
 
   static Future<File> getDatabaseFile() async {
     final dir = await getApplicationDocumentsDirectory();
-    return File(join(dir.path, 'debt_free.sqlite'));
+    return File(join(dir.path, _currentProfile.fileName));
   }
 
   static Future<Database> get instance async {
@@ -45,24 +72,16 @@ class AppDatabase {
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
-          await db.execute(
-            "ALTER TABLE transactions ADD COLUMN type TEXT NOT NULL DEFAULT 'expense';",
-          );
-          await db.execute(
-            "UPDATE transactions SET type = CASE WHEN amount < 0 THEN 'expense' ELSE 'income' END;",
-          );
+          await db.execute("ALTER TABLE transactions ADD COLUMN type TEXT NOT NULL DEFAULT 'expense';");
+          await db.execute("UPDATE transactions SET type = CASE WHEN amount < 0 THEN 'expense' ELSE 'income' END;");
         }
-        if (oldVersion < 3) {
-          await _createCategoryTables(db);
-        }
+        if (oldVersion < 3) await _createCategoryTables(db);
         if (oldVersion < 4) {
           await _createGoalsTable(db);
           await db.execute('ALTER TABLE transactions ADD COLUMN goal_id TEXT;');
         }
         if (oldVersion < 5) {
-          await db.execute(
-            'ALTER TABLE categories ADD COLUMN is_tracked INTEGER NOT NULL DEFAULT 0;',
-          );
+          await db.execute('ALTER TABLE categories ADD COLUMN is_tracked INTEGER NOT NULL DEFAULT 0;');
         }
       },
     );
@@ -85,30 +104,14 @@ class AppDatabase {
     ''');
 
     const defaults = [
-      'Uncategorized',
-      'Groceries',
-      'Dining Out',
-      'Personal & Household',
-      'Car, Gas & Auto Ins.',
-      'Bills & Utilities',
-      'Subscriptions',
-      'Taxes & Gov',
-      'School Fees',
-      'Kids Activities',
-      'Kids Clothing & Gear',
-      'Personal Activities',
-      'My Clothing & Jewelry',
-      'Housing',
-      'Insurance',
-      'Health & Pharmacy',
+      'Uncategorized', 'Groceries', 'Dining Out', 'Personal & Household',
+      'Car, Gas & Auto Ins.', 'Bills & Utilities', 'Subscriptions', 'Taxes & Gov',
+      'School Fees', 'Kids Activities', 'Kids Clothing & Gear', 'Personal Activities',
+      'My Clothing & Jewelry', 'Housing', 'Insurance', 'Health & Pharmacy',
     ];
 
     for (final cat in defaults) {
-      await db.insert(
-        'categories',
-        {'name': cat},
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+      await db.insert('categories', {'name': cat}, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 

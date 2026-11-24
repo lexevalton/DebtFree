@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/database/app_database.dart';
 import '../../domain/repositories/transaction_repository.dart';
+import '../../theme/app_theme.dart';
 import 'categories_page.dart';
 import 'dashboard_page.dart';
 import 'expenses_page.dart';
@@ -17,14 +19,26 @@ class LeftMenuPage extends StatefulWidget {
 class _LeftMenuPageState extends State<LeftMenuPage> {
   int _selectedIndex = 0;
   bool _isMenuExtended = true;
+  DatabaseProfile _activeProfile = AppDatabase.currentProfile;
+  int _reloadTick = 0;
+
+  Future<void> _onProfileChanged(DatabaseProfile? profile) async {
+    if (profile == null || profile == _activeProfile) return;
+    await AppDatabase.switchProfile(profile);
+    if (!mounted) return;
+    setState(() {
+      _activeProfile = profile;
+      _reloadTick++;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final pages = [
-      DashboardPage(repository: widget.repository),
-      ExpensesPage(repository: widget.repository),
-      CategoriesPage(repository: widget.repository),
-      GoalsPage(repository: widget.repository),
+      DashboardPage(key: ValueKey('dash_$_reloadTick'), repository: widget.repository),
+      ExpensesPage(key: ValueKey('exp_$_reloadTick'), repository: widget.repository),
+      CategoriesPage(key: ValueKey('cat_$_reloadTick'), repository: widget.repository),
+      GoalsPage(key: ValueKey('goal_$_reloadTick'), repository: widget.repository),
     ];
 
     return Scaffold(
@@ -34,21 +48,60 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
             selectedIndex: _selectedIndex,
             onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
             extended: _isMenuExtended,
+            backgroundColor: AppColors.surface,
+            indicatorColor: AppColors.menuSelected,
+            selectedIconTheme: const IconThemeData(color: AppColors.primaryDark),
+            unselectedIconTheme: const IconThemeData(color: AppColors.textSecondary),
+            selectedLabelTextStyle: const TextStyle(
+              color: AppColors.primaryDark,
+              fontWeight: FontWeight.w600,
+            ),
+            unselectedLabelTextStyle: const TextStyle(color: AppColors.textSecondary),
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (_isMenuExtended) ...[
-                    const Icon(Icons.account_balance_wallet, size: 32, color: Colors.blue),
+                    const Icon(Icons.account_balance_wallet, size: 30, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'DebtFree',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
                     const SizedBox(width: 8),
                   ],
                   IconButton(
                     icon: Icon(_isMenuExtended ? Icons.menu_open : Icons.menu),
+                    color: AppColors.textSecondary,
                     tooltip: _isMenuExtended ? 'Collapse menu' : 'Expand menu',
                     onPressed: () => setState(() => _isMenuExtended = !_isMenuExtended),
                   ),
                 ],
+              ),
+            ),
+            trailing: Expanded(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16, left: 8, right: 8),
+                  child: _isMenuExtended
+                      ? _buildProfileSelector()
+                      : IconButton(
+                          tooltip: 'Database: ${_activeProfile.label}',
+                          icon: Icon(
+                            Icons.storage,
+                            color: _activeProfile == DatabaseProfile.real
+                                ? AppColors.primary
+                                : AppColors.warning,
+                          ),
+                          onPressed: () => setState(() => _isMenuExtended = true),
+                        ),
+                ),
               ),
             ),
             destinations: const [
@@ -74,9 +127,40 @@ class _LeftMenuPageState extends State<LeftMenuPage> {
               ),
             ],
           ),
-          const VerticalDivider(thickness: 1, width: 1),
-          Expanded(child: pages[_selectedIndex]),
+          const VerticalDivider(thickness: 1, width: 1, color: AppColors.border),
+          Expanded(
+            child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: pages[_selectedIndex],
+          ),
+        ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProfileSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      decoration: BoxDecoration(
+        color: _activeProfile == DatabaseProfile.real
+            ? AppColors.background
+            : AppColors.warning.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: _activeProfile == DatabaseProfile.real ? AppColors.border : AppColors.warning,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<DatabaseProfile>(
+          value: _activeProfile,
+          isDense: true,
+          style: const TextStyle(fontSize: 12.5, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+          items: DatabaseProfile.values
+              .map((p) => DropdownMenuItem(value: p, child: Text(p.label)))
+              .toList(),
+          onChanged: _onProfileChanged,
+        ),
       ),
     );
   }

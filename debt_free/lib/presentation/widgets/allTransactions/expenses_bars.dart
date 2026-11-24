@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../theme/app_theme.dart';
 
 class ExpensesAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isSelectionMode;
@@ -18,20 +19,28 @@ class ExpensesAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: const Text('DebtFree — Clear your debts !'),
+      title: const Text('DebtFree — Clear your debts!'),
       actions: [
         OutlinedButton.icon(
           onPressed: onToggleSelectionMode,
-          icon: Icon(isSelectionMode ? Icons.close : Icons.checklist),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            side: const BorderSide(color: Colors.white70, width: 1.3),
+          ),
+          icon: Icon(isSelectionMode ? Icons.close : Icons.checklist, size: 18),
           label: Text(isSelectionMode ? 'Cancel Bulk' : 'Bulk Edit'),
         ),
         const SizedBox(width: 8),
         FilledButton.icon(
           onPressed: onRefresh,
-          icon: const Icon(Icons.refresh),
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: AppColors.primaryDark,
+          ),
+          icon: const Icon(Icons.refresh, size: 18),
           label: const Text('Refresh'),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 24),
       ],
     );
   }
